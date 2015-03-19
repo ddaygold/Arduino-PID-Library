@@ -6,9 +6,9 @@
  **********************************************************************************************/
 
 #if ARDUINO >= 100
-  #include "Arduino.h"
+#include "Arduino.h"
 #else
-  #include "WProgram.h"
+#include "WProgram.h"
 #endif
 
 #include <PID_v1.h>
@@ -17,24 +17,24 @@
  *    The parameters specified here are those for for which we can't set up 
  *    reliable defaults, so we need to have the user set them.
  ***************************************************************************/
-PID::PID(double* Input, double* Output, double* Setpoint,
-        double Kp, double Ki, double Kd, int ControllerDirection)
+PID::PID(volatile double* Input, volatile double* Output, volatile double* Setpoint,
+	 volatile double Kp, volatile double Ki, volatile double Kd, int ControllerDirection)
 {
 	
-    myOutput = Output;
-    myInput = Input;
-    mySetpoint = Setpoint;
-	inAuto = false;
+  myOutput = Output;
+  myInput = Input;
+  mySetpoint = Setpoint;
+  inAuto = false;
 	
-	PID::SetOutputLimits(0, 255);				//default output limit corresponds to 
-												//the arduino pwm limits
+  PID::SetOutputLimits(0, 255);				//default output limit corresponds to 
+  //the arduino pwm limits
 
-    SampleTime = 100;							//default Controller Sample Time is 0.1 seconds
+  SampleTime = 100;							//default Controller Sample Time is 0.1 seconds
 
-    PID::SetControllerDirection(ControllerDirection);
-    PID::SetTunings(Kp, Ki, Kd);
+  PID::SetControllerDirection(ControllerDirection);
+  PID::SetTunings(Kp, Ki, Kd);
 
-    lastTime = millis()-SampleTime;				
+  lastTime = millis()-SampleTime;				
 }
  
  
@@ -46,13 +46,13 @@ PID::PID(double* Input, double* Output, double* Setpoint,
  **********************************************************************************/ 
 bool PID::Compute()
 {
-   if(!inAuto) return false;
-   unsigned long now = millis();
-   unsigned long timeChange = (now - lastTime);
-   if(timeChange>=SampleTime)
-   {
+  if(!inAuto) return false;
+  unsigned long now = millis();
+  unsigned long timeChange = (now - lastTime);
+  if(timeChange>=SampleTime)
+    {
       /*Compute all the working error variables*/
-	  double input = *myInput;
+      double input = *myInput;
       double error = *mySetpoint - input;
       ITerm+= (ki * error);
       if(ITerm > outMax) ITerm= outMax;
@@ -62,16 +62,16 @@ bool PID::Compute()
       /*Compute PID Output*/
       double output = kp * error + ITerm- kd * dInput;
       
-	  if(output > outMax) output = outMax;
+      if(output > outMax) output = outMax;
       else if(output < outMin) output = outMin;
-	  *myOutput = output;
+      *myOutput = output;
 	  
       /*Remember some variables for next time*/
       lastInput = input;
       lastTime = now;
-	  return true;
-   }
-   else return false;
+      return true;
+    }
+  else return false;
 }
 
 
@@ -80,23 +80,23 @@ bool PID::Compute()
  * it's called automatically from the constructor, but tunings can also
  * be adjusted on the fly during normal operation
  ******************************************************************************/ 
-void PID::SetTunings(double Kp, double Ki, double Kd)
+void PID::SetTunings(volatile double Kp, volatile double Ki, volatile double Kd)
 {
-   if (Kp<0 || Ki<0 || Kd<0) return;
+  if (Kp<0 || Ki<0 || Kd<0) return;
  
-   dispKp = Kp; dispKi = Ki; dispKd = Kd;
+  dispKp = Kp; dispKi = Ki; dispKd = Kd;
    
-   double SampleTimeInSec = ((double)SampleTime)/1000;  
-   kp = Kp;
-   ki = Ki * SampleTimeInSec;
-   kd = Kd / SampleTimeInSec;
+  double SampleTimeInSec = ((double)SampleTime)/1000;  
+  kp = Kp;
+  ki = Ki * SampleTimeInSec;
+  kd = Kd / SampleTimeInSec;
  
   if(controllerDirection ==REVERSE)
-   {
+    {
       kp = (0 - kp);
       ki = (0 - ki);
       kd = (0 - kd);
-   }
+    }
 }
   
 /* SetSampleTime(...) *********************************************************
@@ -104,14 +104,14 @@ void PID::SetTunings(double Kp, double Ki, double Kd)
  ******************************************************************************/
 void PID::SetSampleTime(int NewSampleTime)
 {
-   if (NewSampleTime > 0)
-   {
+  if (NewSampleTime > 0)
+    {
       double ratio  = (double)NewSampleTime
-                      / (double)SampleTime;
+	/ (double)SampleTime;
       ki *= ratio;
       kd /= ratio;
       SampleTime = (unsigned long)NewSampleTime;
-   }
+    }
 }
  
 /* SetOutputLimits(...)****************************************************
@@ -124,18 +124,18 @@ void PID::SetSampleTime(int NewSampleTime)
  **************************************************************************/
 void PID::SetOutputLimits(double Min, double Max)
 {
-   if(Min >= Max) return;
-   outMin = Min;
-   outMax = Max;
+  if(Min >= Max) return;
+  outMin = Min;
+  outMax = Max;
  
-   if(inAuto)
-   {
-	   if(*myOutput > outMax) *myOutput = outMax;
-	   else if(*myOutput < outMin) *myOutput = outMin;
+  if(inAuto)
+    {
+      if(*myOutput > outMax) *myOutput = outMax;
+      else if(*myOutput < outMin) *myOutput = outMin;
 	 
-	   if(ITerm > outMax) ITerm= outMax;
-	   else if(ITerm < outMin) ITerm= outMin;
-   }
+      if(ITerm > outMax) ITerm= outMax;
+      else if(ITerm < outMin) ITerm= outMin;
+    }
 }
 
 /* SetMode(...)****************************************************************
@@ -145,12 +145,12 @@ void PID::SetOutputLimits(double Min, double Max)
  ******************************************************************************/ 
 void PID::SetMode(int Mode)
 {
-    bool newAuto = (Mode == AUTOMATIC);
-    if(newAuto == !inAuto)
+  bool newAuto = (Mode == AUTOMATIC);
+  if(newAuto == !inAuto)
     {  /*we just went from manual to auto*/
-        PID::Initialize();
+      PID::Initialize();
     }
-    inAuto = newAuto;
+  inAuto = newAuto;
 }
  
 /* Initialize()****************************************************************
@@ -159,10 +159,10 @@ void PID::SetMode(int Mode)
  ******************************************************************************/ 
 void PID::Initialize()
 {
-   ITerm = *myOutput;
-   lastInput = *myInput;
-   if(ITerm > outMax) ITerm = outMax;
-   else if(ITerm < outMin) ITerm = outMin;
+  ITerm = *myOutput;
+  lastInput = *myInput;
+  if(ITerm > outMax) ITerm = outMax;
+  else if(ITerm < outMin) ITerm = outMin;
 }
 
 /* SetControllerDirection(...)*************************************************
@@ -173,13 +173,13 @@ void PID::Initialize()
  ******************************************************************************/
 void PID::SetControllerDirection(int Direction)
 {
-   if(inAuto && Direction !=controllerDirection)
-   {
-	  kp = (0 - kp);
+  if(inAuto && Direction !=controllerDirection)
+    {
+      kp = (0 - kp);
       ki = (0 - ki);
       kd = (0 - kd);
-   }   
-   controllerDirection = Direction;
+    }   
+  controllerDirection = Direction;
 }
 
 /* Status Funcions*************************************************************
